@@ -29,5 +29,4 @@ while ( have_posts() ) :
 	echo "\t";
 	echo twtxt_get_the_excerpt();
 	echo PHP_EOL;
-
 endwhile;
