@@ -2,7 +2,7 @@
 /**
  * Plugin Name: TWTXT
  * Plugin URI: https://github.com/pfefferle/wordpress-twtxt
- * Description: Twtxt is an open, distributed microblogging platform
+ * Description: Twtxt is an open, distributed microblogging platform.
  * Author: Matthias Pfefferle
  * Author URI: https://notiz.blog
  * Version: 1.0.0
