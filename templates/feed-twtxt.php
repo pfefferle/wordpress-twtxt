@@ -28,5 +28,7 @@ while ( have_posts() ) :
 	echo mysql2date( 'c', get_post_time( 'Y-m-d H:i:s', true ), false );
 	echo "\t";
 	echo twtxt_get_the_excerpt();
+	echo ' ⌘ ';
+	echo wp_get_shortlink();
 	echo PHP_EOL;
 endwhile;
