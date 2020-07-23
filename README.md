@@ -13,3 +13,9 @@ Run this to follow me in the app:
 ```shell
 twtxt follow pfefferle https://notiz.blog/author/matthias-pfefferle/feed/twtxt
 ```
+
+...or my blog:
+
+```shell
+twtxt follow notizblog https://notiz.blog/feed/twtxt
+```
