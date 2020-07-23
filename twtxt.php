@@ -72,6 +72,7 @@ function twtxt_get_the_excerpt( $length = 100 ) {
 		$excerpt = get_the_excerpt();
 	}
 
+	$excerpt        = html_entity_decode( htmlspecialchars_decode( $excerpt ) );
 	$excerpt_length = apply_filters( 'excerpt_length', $length );
 	$excerpt_more   = apply_filters( 'excerpt_more', ' [...]' );
 
