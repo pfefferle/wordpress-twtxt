@@ -65,8 +65,13 @@ function twtxt_flush_rewrite_rules() {
  *
  * @return string The shortened text.
  */
-function twtxt_get_the_excerpt( $length = 135 ) {
-	$excerpt        = get_the_excerpt();
+function twtxt_get_the_excerpt( $length = 100 ) {
+	if ( get_the_title() ) {
+		$excerpt = get_the_title();
+	} else {
+		$excerpt = get_the_excerpt();
+	}
+
 	$excerpt_length = apply_filters( 'excerpt_length', $length );
 	$excerpt_more   = apply_filters( 'excerpt_more', ' [...]' );
 
