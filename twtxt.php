@@ -9,6 +9,7 @@
  * License: MIT
  * License URI: https://opensource.org/licenses/MIT
  * Text Domain: twtxt
+ * Update URI: https://github.com/pfefferle/wordpress-twtxt
  */
 
 register_activation_hook( __FILE__, 'twtxt_flush_rewrite_rules' );
