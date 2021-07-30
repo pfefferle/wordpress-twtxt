@@ -5,7 +5,7 @@
  * Description: twtxt is a decentralised, minimalist microblogging service for hackers.
  * Author: Matthias Pfefferle
  * Author URI: https://notiz.blog
- * Version: 1.0.0
+ * Version: 1.0.1
  * License: MIT
  * License URI: https://opensource.org/licenses/MIT
  * Text Domain: twtxt

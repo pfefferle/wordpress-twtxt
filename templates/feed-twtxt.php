@@ -17,12 +17,12 @@
 #
 # ------------------------------------------
 #
-#    nick = <?php echo twtxt_get_nick() . PHP_EOL; ?>
-#    url = <?php self_link(); echo PHP_EOL; ?>
-#    lang = <?php echo get_locale() . PHP_EOL; ?>
+# nick = <?php echo twtxt_get_nick() . PHP_EOL; ?>
+# url = <?php self_link(); echo PHP_EOL; ?>
+# lang = <?php echo get_locale() . PHP_EOL; ?>
 
 <?php
-query_posts( 'posts_per_page=100' );
+query_posts( 'posts_per_page=200' );
 
 while ( have_posts() ) :
 	the_post();
