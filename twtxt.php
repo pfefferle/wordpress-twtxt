@@ -21,6 +21,8 @@ register_deactivation_hook( __FILE__, 'twtxt_flush_rewrite_rules' );
 function twtxt_init() {
 	add_filter( 'feed_content_type', 'twtxt_feed_content_type', 10, 2 );
 	add_feed( 'twtxt', 'do_feed_twtxt' );
+	add_feed( 'twtxt.txt', 'do_feed_twtxt' );
+	add_feed( 'tw.txt', 'do_feed_twtxt' );
 	add_action( 'do_feed_twtxt', 'do_feed_twtxt', 10, 1 );
 }
 add_action( 'init', 'twtxt_init' );
