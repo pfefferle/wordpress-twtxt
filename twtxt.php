@@ -92,3 +92,13 @@ function twtxt_get_nick() {
 
 	return sanitize_title( get_bloginfo( 'name' ) );
 }
+
+/**
+ * Return the generator of the feed.
+ *
+ * @return string The generator.
+ */
+function twtxt_get_generator() {
+	return sanitize_url( 'https://github.com/pfefferle/wordpress-twtxt' );
+}
+
