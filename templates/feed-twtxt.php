@@ -22,7 +22,7 @@
 # lang = <?php echo get_locale() . PHP_EOL; ?>
 # generator = <?php echo twtxt_get_generator() . PHP_EOL; ?>
 <?php
-query_posts( 'posts_per_page=200' );
+query_posts( 'posts_per_page=200&order=DESC' );
 
 while ( have_posts() ) :
 	the_post();
