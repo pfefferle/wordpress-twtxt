@@ -21,16 +21,29 @@
 # url = <?php self_link(); echo PHP_EOL; ?>
 # lang = <?php echo get_locale() . PHP_EOL; ?>
 # generator = <?php echo twtxt_get_generator() . PHP_EOL; ?>
+
 <?php
-query_posts( 'posts_per_page=200&order=ASC' );
+query_posts( 'posts_per_page=200' );
+
+$lines = array();
 
 while ( have_posts() ) :
 	the_post();
 
-	echo mysql2date( 'c', get_post_time( 'Y-m-d H:i:s', true ), false );
-	echo "\t";
-	echo twtxt_get_the_excerpt();
-	echo ' ⌘ ';
-	echo wp_get_shortlink();
-	echo PHP_EOL;
+	$line  = mysql2date( 'c', get_post_time( 'Y-m-d H:i:s', true ), false );
+	$line .= "\t";
+	$line .= twtxt_get_the_excerpt();
+	$line .= ' ?~L~X ';
+	$line .= wp_get_shortlink();
+
+	$lines[] = $line;
 endwhile;
+
+wp_reset_postdata();
+
+// Now reverse and output.
+$lines = array_reverse( $lines );
+
+foreach ( $lines as $line ) {
+	echo $line . PHP_EOL;
+}
