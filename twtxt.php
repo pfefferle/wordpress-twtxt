@@ -112,7 +112,7 @@ function twtxt_get_generator() {
 function twtxt_add_discovery_header() {
 	$feed_url = get_feed_link( 'tw.txt' );
 
-	if ( ! $feed_url || ! is_feed() ) {
+	if ( ! $feed_url ) {
 		return;
 	}
 
