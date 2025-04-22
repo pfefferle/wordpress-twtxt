@@ -106,3 +106,24 @@ function twtxt_get_generator() {
 	return sanitize_url( 'https://github.com/pfefferle/wordpress-twtxt' );
 }
 
+/**
+ * Adds a discovery header to the feed
+ */
+function twtxt_add_discovery_header() {
+	$feed_url = get_feed_link( 'tw.txt' );
+
+	if ( ! $feed_url || ! is_feed() ) {
+		return;
+	}
+
+	if ( ! is_home() && ! is_author() ) {
+		return;
+	}
+
+	if ( ! headers_sent() ) {
+		header( 'Link: <' . esc_url( $feed_url ) . '>; rel="alternate"; type="text/plain"; title="twtxt"' );
+	}
+
+	echo '<link rel="alternate" type="text/plain" title="twtxt" href="' . esc_url( $feed_url ) . '" />' . PHP_EOL;
+}
+add_action( 'wp_head', 'twtxt_add_discovery_header' );
