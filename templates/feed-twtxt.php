@@ -20,30 +20,14 @@
 # nick = <?php echo twtxt_get_nick() . PHP_EOL; ?>
 # url = <?php self_link(); echo PHP_EOL; ?>
 # lang = <?php echo get_locale() . PHP_EOL; ?>
-# generator = <?php echo twtxt_get_generator() . PHP_EOL; ?>
+# generator = https://github.com/pfefferle/wordpress-twtxt
 
 <?php
-query_posts( 'posts_per_page=200' );
+// Newest posts first in the query, oldest first in the file.
+foreach ( array_reverse( $posts ) as $post ) {
+	setup_postdata( $post );
 
-$lines = array();
-
-while ( have_posts() ) :
-	the_post();
-
-	$line  = mysql2date( 'c', get_post_time( 'Y-m-d H:i:s', true ), false );
-	$line .= "\t";
-	$line .= twtxt_get_the_excerpt();
-	$line .= ' ?~L~X ';
-	$line .= wp_get_shortlink();
-
-	$lines[] = $line;
-endwhile;
+	printf( "%s\t%s ⌘ %s" . PHP_EOL, get_post_time( 'c', true ), twtxt_get_the_excerpt(), wp_get_shortlink() );
+}
 
 wp_reset_postdata();
-
-// Now reverse and output.
-$lines = array_reverse( $lines );
-
-foreach ( $lines as $line ) {
-	echo $line . PHP_EOL;
-}

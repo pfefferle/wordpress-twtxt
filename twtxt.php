@@ -12,76 +12,102 @@
  * Update URI: https://github.com/pfefferle/wordpress-twtxt
  */
 
-register_activation_hook( __FILE__, 'twtxt_flush_rewrite_rules' );
-register_deactivation_hook( __FILE__, 'twtxt_flush_rewrite_rules' );
-
 /**
- * Init function
+ * Register the feed.
+ *
+ * `add_feed()` already hooks the callback to `do_feed_tw.txt`.
  */
 function twtxt_init() {
-	add_filter( 'feed_content_type', 'twtxt_feed_content_type', 10, 2 );
-
-	add_feed( 'twtxt', 'do_feed_twtxt' );
-	add_feed( 'twtxt.txt', 'do_feed_twtxt' );
-	add_feed( 'tw.txt', 'do_feed_twtxt' );
-
-	add_action( 'do_feed_twtxt', 'do_feed_twtxt', 10, 1 );
+	add_feed( 'tw.txt', 'twtxt_do_feed' );
 }
 add_action( 'init', 'twtxt_init' );
 
 /**
- * Adds "twtxt" content-type
+ * Flush rewrite rules on (de)activation.
  *
- * @param string $content_type the default content-type
- * @param string $type the feed-type
+ * The feed has to be registered before flushing, otherwise the
+ * new rules do not contain the `tw.txt` endpoint.
+ */
+function twtxt_activate() {
+	twtxt_init();
+	flush_rewrite_rules();
+}
+register_activation_hook( __FILE__, 'twtxt_activate' );
+register_deactivation_hook( __FILE__, 'flush_rewrite_rules' );
+
+/**
+ * Render the feed.
  *
- * @return string the as1 content-type
+ * @param bool $for_comments Whether this is a comment feed.
+ */
+function twtxt_do_feed( $for_comments ) {
+	if ( $for_comments ) {
+		return;
+	}
+
+	load_template( __DIR__ . '/templates/feed-twtxt.php' );
+}
+
+/**
+ * Serve the feed as plain text.
+ *
+ * @param string $content_type The default content-type.
+ * @param string $type         The feed type.
+ *
+ * @return string The content-type.
  */
 function twtxt_feed_content_type( $content_type, $type ) {
-	if ( in_array( $type, array( 'twtxt', 'twtxt.txt', 'tw.txt' ) ) ) {
+	if ( in_array( $type, array( 'tw.txt', 'twtxt', 'twtxt.txt' ), true ) ) {
 		return 'text/plain';
 	}
 
 	return $content_type;
 }
+add_filter( 'feed_content_type', 'twtxt_feed_content_type', 10, 2 );
 
 /**
- * Adds an twtxt json feed
+ * Raise the post limit for the twtxt feed.
+ *
+ * twtxt clients read the whole file, so return more posts than the
+ * usual RSS limit.
+ *
+ * @param WP_Query $query The main query.
  */
-function do_feed_twtxt( $for_comments ) {
-	if ( ! $for_comments ) {
-		// load post template
-		load_template( dirname( __FILE__ ) . '/templates/feed-twtxt.php' );
+function twtxt_pre_get_posts( $query ) {
+	if ( ! $query->is_main_query() || ! $query->is_feed( 'tw.txt' ) ) {
+		return;
 	}
+
+	/**
+	 * Filter the number of posts in the twtxt feed.
+	 *
+	 * @param int $posts_per_feed The number of posts. Default 200.
+	 */
+	$query->set( 'posts_per_rss', (int) apply_filters( 'twtxt_posts_per_feed', 200 ) );
 }
+add_action( 'pre_get_posts', 'twtxt_pre_get_posts' );
 
 /**
- * Reset rewrite rules
- */
-function twtxt_flush_rewrite_rules() {
-	global $wp_rewrite;
-	$wp_rewrite->flush_rules();
-}
-
-/**
- * Retunr the excerpt of the blogpost
+ * Return the text of a twtxt line for the current post.
  *
- * @param integer $length The length of the text.
+ * Uses the title and falls back to the excerpt for title-less posts.
+ * Tags are stripped and whitespace is collapsed, since a line must
+ * not contain tabs or line breaks.
  *
- * @return string The shortened text.
+ * @param int $length The maximum number of words.
+ *
+ * @return string The text.
  */
 function twtxt_get_the_excerpt( $length = 100 ) {
-	if ( get_the_title() ) {
-		$excerpt = get_the_title();
-	} else {
-		$excerpt = get_the_excerpt();
+	$text = get_the_title();
+
+	if ( ! $text ) {
+		$text = get_the_excerpt();
 	}
 
-	$excerpt        = html_entity_decode( htmlspecialchars_decode( $excerpt ) );
-	$excerpt_length = apply_filters( 'excerpt_length', $length );
-	$excerpt_more   = apply_filters( 'excerpt_more', ' [...]' );
+	$text = wp_trim_words( $text, $length, '…' );
 
-	return wp_trim_words( $excerpt, $excerpt_length, $excerpt_more );
+	return html_entity_decode( $text, ENT_QUOTES, 'UTF-8' );
 }
 
 /**
@@ -98,32 +124,53 @@ function twtxt_get_nick() {
 }
 
 /**
- * Return the generator of the feed.
+ * Return the feed URL to advertise on the current page.
  *
- * @return string The generator.
+ * The feed itself works on every archive (`/tag/abc/feed/tw.txt`),
+ * this is only used for discovery on the blog index and author pages.
+ *
+ * @return string The feed URL.
  */
-function twtxt_get_generator() {
-	return sanitize_url( 'https://github.com/pfefferle/wordpress-twtxt' );
+function twtxt_get_feed_url() {
+	if ( is_author() ) {
+		// `get_author_feed_link()` HTML-encodes the ampersand for plain permalinks.
+		return str_replace( '&amp;', '&', get_author_feed_link( get_queried_object_id(), 'tw.txt' ) );
+	}
+
+	return get_feed_link( 'tw.txt' );
 }
 
 /**
- * Adds a discovery header to the feed
+ * Whether the current page should advertise the feed.
+ *
+ * @return bool True on the blog index and author archives.
  */
-function twtxt_add_discovery_header() {
-	$feed_url = get_feed_link( 'tw.txt' );
-
-	if ( ! $feed_url ) {
-		return;
-	}
-
-	if ( ! is_home() && ! is_author() ) {
-		return;
-	}
-
-	if ( ! headers_sent() ) {
-		header( 'Link: <' . esc_url( $feed_url ) . '>; rel="alternate"; type="text/plain"; title="twtxt"' );
-	}
-
-	echo '<link rel="alternate" type="text/plain" title="twtxt" href="' . esc_url( $feed_url ) . '" />' . PHP_EOL;
+function twtxt_is_discoverable() {
+	return ! is_feed() && ( is_home() || is_author() );
 }
-add_action( 'wp_head', 'twtxt_add_discovery_header' );
+
+/**
+ * Send the discovery `Link` header.
+ *
+ * Has to run before any output, `wp_head` is too late for headers.
+ */
+function twtxt_send_headers() {
+	if ( ! twtxt_is_discoverable() || headers_sent() ) {
+		return;
+	}
+
+	header( sprintf( 'Link: <%s>; rel="alternate"; type="text/plain"; title="%s"', esc_url_raw( twtxt_get_feed_url() ), __( 'twtxt', 'twtxt' ) ), false );
+}
+add_action( 'template_redirect', 'twtxt_send_headers' );
+
+/**
+ * Add the discovery `<link>` to the HTML head.
+ */
+function twtxt_add_discovery_link() {
+	if ( ! twtxt_is_discoverable() ) {
+		return;
+	}
+
+	printf( '<link rel="alternate" type="text/plain" title="%s" href="%s" />' . PHP_EOL, esc_attr__( 'twtxt', 'twtxt' ), esc_url( twtxt_get_feed_url() ) );
+}
+add_action( 'wp_head', 'twtxt_add_discovery_link' );
