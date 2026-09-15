@@ -66,6 +66,35 @@ function twtxt_feed_content_type( $content_type, $type ) {
 add_filter( 'feed_content_type', 'twtxt_feed_content_type', 10, 2 );
 
 /**
+ * Redirect the old `twtxt` and `twtxt.txt` feed URLs to `tw.txt`.
+ *
+ * The old names are not registered as feeds, so nothing is added to
+ * the feed types. Only the feed name in the request URI is swapped,
+ * the context (author, tag, ...) stays intact.
+ */
+function twtxt_redirect_legacy_feed() {
+	if ( ! is_404() && ! is_feed() ) {
+		return;
+	}
+
+	$uri = wp_unslash( $_SERVER['REQUEST_URI'] );
+	$new = preg_replace(
+		array( '#/feed/twtxt(\.txt)?(/?)(\?|$)#', '#([?&])feed=twtxt(\.txt)?(&|$)#' ),
+		array( '/feed/tw.txt$2$3', '$1feed=tw.txt$3' ),
+		$uri,
+		1
+	);
+
+	if ( $new === $uri ) {
+		return;
+	}
+
+	wp_safe_redirect( set_url_scheme( sprintf( 'http://%s%s', $_SERVER['HTTP_HOST'], $new ) ), 301 );
+	exit;
+}
+add_action( 'template_redirect', 'twtxt_redirect_legacy_feed', 1 );
+
+/**
  * Raise the post limit for the twtxt feed.
  *
  * twtxt clients read the whole file, so return more posts than the

@@ -15,6 +15,8 @@ The plugin adds a `tw.txt` feed for the whole blog and one per author:
 
 Both are announced via a `<link rel="alternate">` tag and a `Link` HTTP header on the blog index and on author archives.
 
+The old `/feed/twtxt` and `/feed/twtxt.txt` URLs redirect to `/feed/tw.txt`.
+
 The feed contains the latest 200 posts in chronological order. Use the `twtxt_posts_per_feed` filter to change the number.
 
 ## Example
