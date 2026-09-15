@@ -6,6 +6,28 @@ nothing more... nothing less...
 
 More infos about twtxt here <https://github.com/buckket/twtxt>
 
+## Installation
+
+The plugin is not in the WordPress.org directory, so you have to install it by hand:
+
+1. Download the [ZIP file](https://github.com/pfefferle/wordpress-twtxt/archive/refs/heads/master.zip)
+2. Go to *Plugins → Add New → Upload Plugin* in your WordPress admin and upload it (or unzip it into `wp-content/plugins/` via FTP)
+3. Activate the plugin
+
+The feed is available right after activation, no need to re-save the permalinks.
+
+Alternatively with WP-CLI:
+
+```shell
+wp plugin install https://github.com/pfefferle/wordpress-twtxt/archive/refs/heads/master.zip --activate
+```
+
+...or with Composer:
+
+```shell
+composer require pfefferle/wordpress-twtxt
+```
+
 ## Feeds
 
 The plugin adds a `tw.txt` feed for the whole blog and one per author:
