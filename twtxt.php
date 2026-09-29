@@ -120,8 +120,8 @@ add_action( 'pre_get_posts', 'twtxt_pre_get_posts' );
  * Return the text of a twtxt line for the current post.
  *
  * Uses the title and falls back to the excerpt for title-less posts.
- * Tags are stripped and whitespace is collapsed, since a line must
- * not contain tabs or line breaks.
+ * Tags are stripped and control characters are replaced, since a line
+ * must not contain tabs, line breaks or other control characters.
  *
  * @param int $length The maximum number of words.
  *
@@ -135,8 +135,10 @@ function twtxt_get_the_excerpt( $length = 100 ) {
 	}
 
 	$text = wp_trim_words( $text, $length, '…' );
+	$text = html_entity_decode( $text, ENT_QUOTES, 'UTF-8' );
 
-	return html_entity_decode( $text, ENT_QUOTES, 'UTF-8' );
+	// Decoding can bring back tabs and line breaks (`&#9;`, `&#10;`).
+	return trim( preg_replace( '/\p{Cc}+/u', ' ', $text ) );
 }
 
 /**
