@@ -30,14 +30,14 @@ composer require pfefferle/wordpress-twtxt
 
 ## Feeds
 
-The plugin adds a `tw.txt` feed for the whole blog and one per author:
+The plugin adds a `twtxt` feed for the whole blog and one per author:
 
-* `https://example.com/feed/tw.txt`
-* `https://example.com/author/USERNAME/feed/tw.txt`
+* `https://example.com/feed/twtxt`
+* `https://example.com/author/USERNAME/feed/twtxt`
 
 Both are announced via a `<link rel="alternate">` tag and a `Link` HTTP header on the blog index and on author archives.
 
-The old `/feed/twtxt` and `/feed/twtxt.txt` URLs redirect to `/feed/tw.txt`.
+The old `/feed/tw.txt` and `/feed/twtxt.txt` URLs redirect to `/feed/twtxt`.
 
 The feed contains the latest 200 posts in chronological order. Use the `twtxt_posts_per_feed` filter to change the number.
 
@@ -46,11 +46,11 @@ The feed contains the latest 200 posts in chronological order. Use the `twtxt_po
 Run this to follow me in the app:
 
 ```shell
-twtxt follow pfefferle https://notiz.blog/author/matthias-pfefferle/feed/tw.txt
+twtxt follow pfefferle https://notiz.blog/author/matthias-pfefferle/feed/twtxt
 ```
 
 ...or my blog:
 
 ```shell
-twtxt follow notizblog https://notiz.blog/feed/tw.txt
+twtxt follow notizblog https://notiz.blog/feed/twtxt
 ```

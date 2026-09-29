@@ -15,10 +15,10 @@
 /**
  * Register the feed.
  *
- * `add_feed()` already hooks the callback to `do_feed_tw.txt`.
+ * `add_feed()` already hooks the callback to `do_feed_twtxt`.
  */
 function twtxt_init() {
-	add_feed( 'tw.txt', 'twtxt_do_feed' );
+	add_feed( 'twtxt', 'twtxt_do_feed' );
 }
 add_action( 'init', 'twtxt_init' );
 
@@ -26,7 +26,7 @@ add_action( 'init', 'twtxt_init' );
  * Flush rewrite rules on (de)activation.
  *
  * The feed has to be registered before flushing, otherwise the
- * new rules do not contain the `tw.txt` endpoint.
+ * new rules do not contain the `twtxt` endpoint.
  */
 function twtxt_activate() {
 	twtxt_init();
@@ -66,7 +66,7 @@ function twtxt_feed_content_type( $content_type, $type ) {
 add_filter( 'feed_content_type', 'twtxt_feed_content_type', 10, 2 );
 
 /**
- * Redirect the old `twtxt` and `twtxt.txt` feed URLs to `tw.txt`.
+ * Redirect the old `tw.txt` and `twtxt.txt` feed URLs to `twtxt`.
  *
  * The old names are not registered as feeds, so nothing is added to
  * the feed types. Only the feed name in the request URI is swapped,
@@ -79,8 +79,8 @@ function twtxt_redirect_legacy_feed() {
 
 	$uri = wp_unslash( $_SERVER['REQUEST_URI'] );
 	$new = preg_replace(
-		array( '#/feed/twtxt(\.txt)?(/?)(\?|$)#', '#([?&])feed=twtxt(\.txt)?(&|$)#' ),
-		array( '/feed/tw.txt$2$3', '$1feed=tw.txt$3' ),
+		array( '#/feed/(tw|twtxt)\.txt(/?)(\?|$)#', '#([?&])feed=(tw|twtxt)\.txt(&|$)#' ),
+		array( '/feed/twtxt$2$3', '$1feed=twtxt$3' ),
 		$uri,
 		1
 	);
@@ -103,7 +103,7 @@ add_action( 'template_redirect', 'twtxt_redirect_legacy_feed', 1 );
  * @param WP_Query $query The main query.
  */
 function twtxt_pre_get_posts( $query ) {
-	if ( ! $query->is_main_query() || ! $query->is_feed( 'tw.txt' ) ) {
+	if ( ! $query->is_main_query() || ! $query->is_feed( 'twtxt' ) ) {
 		return;
 	}
 
@@ -157,7 +157,7 @@ function twtxt_get_nick() {
 /**
  * Return the feed URL to advertise on the current page.
  *
- * The feed itself works on every archive (`/tag/abc/feed/tw.txt`),
+ * The feed itself works on every archive (`/tag/abc/feed/twtxt`),
  * this is only used for discovery on the blog index and author pages.
  *
  * @return string The feed URL.
@@ -165,10 +165,10 @@ function twtxt_get_nick() {
 function twtxt_get_feed_url() {
 	if ( is_author() ) {
 		// `get_author_feed_link()` HTML-encodes the ampersand for plain permalinks.
-		return str_replace( '&amp;', '&', get_author_feed_link( get_queried_object_id(), 'tw.txt' ) );
+		return str_replace( '&amp;', '&', get_author_feed_link( get_queried_object_id(), 'twtxt' ) );
 	}
 
-	return get_feed_link( 'tw.txt' );
+	return get_feed_link( 'twtxt' );
 }
 
 /**
