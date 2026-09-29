@@ -27,7 +27,10 @@
 foreach ( array_reverse( $posts ) as $post ) {
 	setup_postdata( $post );
 
-	printf( "%s\t%s ⌘ %s\n", get_post_time( 'c', true ), twtxt_get_the_excerpt(), wp_get_shortlink() );
+	$url = wp_get_shortlink();
+
+	// A status should not be longer than 140 characters, the link included.
+	printf( "%s\t%s ⌘ %s\n", get_post_time( 'c', true ), twtxt_get_the_excerpt( 140 - mb_strlen( ' ⌘ ' . $url ) ), $url );
 }
 
 wp_reset_postdata();

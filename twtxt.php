@@ -122,23 +122,39 @@ add_action( 'pre_get_posts', 'twtxt_pre_get_posts' );
  * Uses the title and falls back to the excerpt for title-less posts.
  * Tags are stripped and control characters are replaced, since a line
  * must not contain tabs, line breaks or other control characters.
+ * Longer texts are shortened at the last space and end with "…".
  *
- * @param int $length The maximum number of words.
+ * @param int $length The maximum number of characters.
  *
  * @return string The text.
  */
-function twtxt_get_the_excerpt( $length = 100 ) {
+function twtxt_get_the_excerpt( $length = 140 ) {
 	$text = get_the_title();
 
 	if ( ! $text ) {
 		$text = get_the_excerpt();
 	}
 
-	$text = wp_trim_words( $text, $length, '…' );
-	$text = html_entity_decode( $text, ENT_QUOTES, 'UTF-8' );
+	$text = html_entity_decode( wp_strip_all_tags( $text ), ENT_QUOTES, 'UTF-8' );
 
 	// Decoding can bring back tabs and line breaks (`&#9;`, `&#10;`).
-	return trim( preg_replace( '/\p{Cc}+/u', ' ', $text ) );
+	$text   = trim( preg_replace( '/[\p{Cc}\s]+/u', ' ', $text ) );
+	$length = max( $length, 1 );
+
+	if ( mb_strlen( $text ) > $length ) {
+		$text = mb_substr( $text, 0, $length - 1 );
+
+		// Cut at the last space, so no word is split.
+		$cut = preg_replace( '/ [^ ]*$/u', '', $text );
+
+		if ( $cut ) {
+			$text = $cut;
+		}
+
+		$text .= '…';
+	}
+
+	return $text;
 }
 
 /**
