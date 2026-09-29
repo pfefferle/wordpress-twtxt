@@ -17,9 +17,9 @@
 #
 # ------------------------------------------
 #
-# nick = <?php echo twtxt_get_nick() . PHP_EOL; ?>
-# url = <?php self_link(); echo PHP_EOL; ?>
-# lang = <?php echo get_locale() . PHP_EOL; ?>
+# nick = <?php echo twtxt_get_nick() . "\n"; ?>
+# url = <?php self_link(); echo "\n"; ?>
+# lang = <?php echo get_locale() . "\n"; ?>
 # generator = https://github.com/pfefferle/wordpress-twtxt
 
 <?php
@@ -27,7 +27,7 @@
 foreach ( array_reverse( $posts ) as $post ) {
 	setup_postdata( $post );
 
-	printf( "%s\t%s ⌘ %s" . PHP_EOL, get_post_time( 'c', true ), twtxt_get_the_excerpt(), wp_get_shortlink() );
+	printf( "%s\t%s ⌘ %s\n", get_post_time( 'c', true ), twtxt_get_the_excerpt(), wp_get_shortlink() );
 }
 
 wp_reset_postdata();
