@@ -171,6 +171,127 @@ function twtxt_get_nick() {
 }
 
 /**
+ * Return the avatar URL advertised in the feed metadata.
+ *
+ * @return string The avatar URL, or an empty string if none is available.
+ */
+function twtxt_get_avatar() {
+	if ( is_author() ) {
+		$avatar = get_avatar_url( get_queried_object_id(), array( 'size' => 512 ) );
+	} else {
+		$avatar = get_site_icon_url( 512 );
+	}
+
+	/**
+	 * Filter the feed avatar URL.
+	 *
+	 * @param string $avatar The author avatar or site icon URL. Return an empty
+	 *                       string to omit the avatar metadata.
+	 */
+	$avatar = apply_filters( 'twtxt_avatar', $avatar );
+
+	if ( ! is_string( $avatar ) ) {
+		return '';
+	}
+
+	$avatar = trim( $avatar );
+
+	if ( preg_match( '/[\p{Cc}\s]/u', $avatar ) ) {
+		return '';
+	}
+
+	return esc_url_raw( $avatar );
+}
+
+/**
+ * Return the links advertised in the feed metadata.
+ *
+ * @return array Link labels mapped to URLs.
+ */
+function twtxt_get_links() {
+	$links = array( 'Blog' => home_url( '/' ) );
+
+	if ( is_author() ) {
+		$website = get_the_author_meta( 'user_url', get_queried_object_id() );
+
+		if ( $website ) {
+			$links['Website'] = $website;
+		}
+	}
+
+	/**
+	 * Filter the links advertised in the feed metadata.
+	 *
+	 * @param array $links Link labels mapped to URLs. Labels may contain spaces.
+	 */
+	return twtxt_sanitize_metadata_links( apply_filters( 'twtxt_links', $links ) );
+}
+
+/**
+ * Return the followed feeds advertised in the feed metadata.
+ *
+ * @return array Nicknames mapped to feed URLs.
+ */
+function twtxt_get_follows() {
+	$follows = array();
+
+	if ( is_author() ) {
+		$follows[ sanitize_title( get_bloginfo( 'name' ) ) ] = get_feed_link( 'twtxt' );
+	} else {
+		$authors = get_users(
+			array(
+				'has_published_posts' => true,
+				'fields'              => array( 'ID', 'user_nicename' ),
+			)
+		);
+
+		foreach ( $authors as $author ) {
+			$follows[ sanitize_title( $author->user_nicename ) ] = str_replace( '&amp;', '&', get_author_feed_link( $author->ID, 'twtxt' ) );
+		}
+	}
+
+	/**
+	 * Filter the publicly advertised followed feeds.
+	 *
+	 * @param array $follows Nicknames mapped to feed URLs. Defaults to the blog
+	 *                       on author feeds and published authors on other feeds.
+	 */
+	return twtxt_sanitize_metadata_links( apply_filters( 'twtxt_follows', $follows ) );
+}
+
+/**
+ * Keep metadata labels and URLs on a single physical line.
+ *
+ * URLs are plain text, so preserve URI schemes such as gopher and im.
+ * Skip empty labels and URLs without a scheme or containing whitespace.
+ *
+ * @param array $links Labels or nicknames mapped to URLs.
+ *
+ * @return array Sanitized labels mapped to URLs.
+ */
+function twtxt_sanitize_metadata_links( $links ) {
+	$sanitized = array();
+
+	foreach ( (array) $links as $label => $url ) {
+		if ( ! is_string( $url ) ) {
+			continue;
+		}
+
+		$label = html_entity_decode( wp_strip_all_tags( (string) $label ), ENT_QUOTES, 'UTF-8' );
+		$label = trim( preg_replace( '/[\p{Cc}\s]+/u', ' ', $label ) );
+		$url   = trim( $url );
+
+		if ( '' === $label || ! preg_match( '/^[a-z][a-z0-9+.-]*:[^\p{Cc}\s]+$/iu', $url ) ) {
+			continue;
+		}
+
+		$sanitized[ $label ] = $url;
+	}
+
+	return $sanitized;
+}
+
+/**
  * Return the feed URL to advertise on the current page.
  *
  * The feed itself works on every archive (`/tag/abc/feed/twtxt`),
