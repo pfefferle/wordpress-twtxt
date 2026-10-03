@@ -21,7 +21,6 @@
 # url = <?php echo esc_url_raw( apply_filters( 'self_link', get_self_link() ) ) . "\n"; ?>
 # lang = <?php echo get_locale() . "\n"; ?>
 # generator = https://github.com/pfefferle/wordpress-twtxt
-
 <?php
 $avatar  = twtxt_get_avatar();
 $links   = twtxt_get_links();
