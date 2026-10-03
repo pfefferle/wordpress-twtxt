@@ -22,12 +22,17 @@
 # lang = <?php echo get_locale() . "\n"; ?>
 # generator = https://github.com/pfefferle/wordpress-twtxt
 <?php
-$avatar  = twtxt_get_avatar();
-$links   = twtxt_get_links();
-$follows = twtxt_get_follows();
+$avatar      = twtxt_get_avatar();
+$description = twtxt_get_description();
+$links       = twtxt_get_links();
+$follows     = twtxt_get_follows();
 
 if ( $avatar ) {
 	printf( "# avatar = %s\n", $avatar );
+}
+
+if ( '' !== $description ) {
+	printf( "# description = %s\n", $description );
 }
 
 printf( "# following = %d\n", count( $follows ) );

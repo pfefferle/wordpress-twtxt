@@ -204,6 +204,35 @@ function twtxt_get_avatar() {
 }
 
 /**
+ * Return the description advertised in the feed metadata.
+ *
+ * @return string The description, or an empty string if none is available.
+ */
+function twtxt_get_description() {
+	if ( is_author() ) {
+		$description = get_the_author_meta( 'description', get_queried_object_id() );
+	} else {
+		$description = get_bloginfo( 'description' );
+	}
+
+	/**
+	 * Filter the feed description.
+	 *
+	 * @param string $description The author bio or site tagline. Return an empty
+	 *                            string to omit the description metadata.
+	 */
+	$description = apply_filters( 'twtxt_description', $description );
+
+	if ( ! is_string( $description ) ) {
+		return '';
+	}
+
+	$description = html_entity_decode( wp_strip_all_tags( $description ), ENT_QUOTES, 'UTF-8' );
+
+	return trim( (string) preg_replace( '/[\p{Cc}\s]+/u', ' ', $description ) );
+}
+
+/**
  * Return the links advertised in the feed metadata.
  *
  * @return array Link labels mapped to URLs.

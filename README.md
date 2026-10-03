@@ -43,13 +43,21 @@ The feed contains the latest 200 posts in chronological order. Use the `twtxt_po
 
 ## Feed metadata
 
-The feed supports the [twtxt metadata extension](https://twtxt.dev/exts/metadata.html) with `avatar`, `link`, `follow` and `following` fields.
+The feed supports the [twtxt metadata extension](https://twtxt.dev/exts/metadata.html) with `avatar`, `description`, `link`, `follow` and `following` fields.
 
 The blog feed uses the WordPress site icon as its avatar. Author feeds use the author's WordPress avatar. Use `twtxt_avatar` to override the URL, or return an empty string to omit the field. If the blog has no site icon, its avatar field is omitted.
 
 ```php
 add_filter( 'twtxt_avatar', function ( $avatar ) {
 	return 'https://example.com/avatar.png';
+} );
+```
+
+The blog feed uses the site tagline as its description, and author feeds use the author's bio from their WordPress profile. HTML is stripped and whitespace is normalized to keep the description on one line. Use `twtxt_description` to customize it, or return an empty string to omit the field. Empty descriptions are omitted by default.
+
+```php
+add_filter( 'twtxt_description', function ( $description ) {
+	return 'Notes about the open web.';
 } );
 ```
 
