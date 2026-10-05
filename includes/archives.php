@@ -17,10 +17,11 @@ function twtxt_query_vars( $vars ) {
 add_filter( 'query_vars', 'twtxt_query_vars' );
 
 /**
- * Select a complete calendar year for a main twtxt query.
+ * Select complete calendar years for a main twtxt query.
  *
  * Date and singular feeds keep their original scope. Archive feeds retain the
- * same author and taxonomy constraints as their main feed.
+ * same author and taxonomy constraints as their main feed. The main feed keeps
+ * at least the configured post count, extending back through complete years.
  *
  * @param WP_Query $query The main query.
  */
@@ -38,11 +39,33 @@ function twtxt_set_archive_year( $query ) {
 	$requested    = $query->get( 'twtxt_year' );
 	$year         = is_scalar( $requested ) ? (int) $requested : 0;
 
-	if ( $year < 1 || $year > $current_year ) {
-		$year = $current_year;
+	if ( $year >= 1 && $year <= $current_year ) {
+		$query->set( 'year', $year );
+	} else {
+		$recent                   = $query->query_vars;
+		$recent['posts_per_rss']  = max( 1, (int) $query->get( 'posts_per_rss' ) );
+		$recent['posts_per_page'] = $recent['posts_per_rss'];
+		$recent['nopaging']       = false;
+		$recent['paged']          = 1;
+		$recent['no_found_rows']  = true;
+		$recent['fields']         = 'ids';
+		$recent                   = new WP_Query( $recent );
+		$oldest                   = $recent->posts ? get_post( end( $recent->posts ) ) : null;
+		$year                     = $oldest ? min( $current_year, (int) substr( $oldest->post_date, 0, 4 ) ) : $current_year;
+		$date_query               = $query->get( 'date_query' );
+		$date_query               = is_array( $date_query ) ? $date_query : array();
+		$date_query[]             = array(
+			'after'     => array(
+				'year'  => $year,
+				'month' => 1,
+				'day'   => 1,
+			),
+			'inclusive' => true,
+		);
+		$query->set( 'date_query', $date_query );
+		$query->set( 'twtxt_main_years', true );
 	}
 
-	$query->set( 'year', $year );
 	$query->set( 'twtxt_archive_year', $year );
 	$query->set( 'posts_per_rss', -1 );
 	$query->set( 'posts_per_page', -1 );
@@ -134,6 +157,11 @@ function twtxt_get_prev() {
 
 	$query = $wp_query->query_vars;
 	unset( $query['year'], $query['twtxt_year'], $query['twtxt_archive_year'] );
+	if ( ! empty( $query['twtxt_main_years'] ) ) {
+		// Remove the main feed's lower date bound before looking for older posts.
+		array_pop( $query['date_query'] );
+		unset( $query['twtxt_main_years'] );
+	}
 	$query['date_query'][]   = array(
 		'before' => array(
 			'year'  => $year,

@@ -39,11 +39,11 @@ Both are announced via a `<link rel="alternate">` tag and a `Link` HTTP header o
 
 The old `/feed/tw.txt` and `/feed/twtxt.txt` URLs redirect to `/feed/twtxt`.
 
-The main feed contains all published posts from the current calendar year, in chronological order. Year boundaries use the site's timezone. Older years are available as linked archive feeds, without duplicating posts between the main feed and its archives.
+The main feed contains the current calendar year's published posts and at least the latest 200 posts, in chronological order. When necessary, it includes complete older years to reach that minimum, or all posts if fewer exist. This keeps recent posts available to clients that do not support archives, even at the start of a year or on an inactive blog. Year boundaries use the site's timezone.
 
 ## Archives
 
-Yearly archives are enabled by default. The `prev` metadata links to the latest earlier year with published posts and includes the hash of that archive's last post. Empty years are skipped, and each archive links to the next older year. New posts in the current year do not shift existing archives.
+Yearly archives are enabled by default. The `prev` metadata links to the latest year older than the main feed's contents and includes the hash of that archive's last post. Empty years are skipped, and each archive links to the next older year. The linked feeds do not duplicate posts. New posts can move the oldest complete year out of the main feed, while each archive URL keeps its year-specific contents. Clients without archive support can read the main feed but cannot retrieve earlier history through `prev`.
 
 You can also request a year directly:
 
@@ -58,7 +58,7 @@ To restore the latest-200-post feed, disable yearly archives:
 add_filter( 'twtxt_archives', '__return_false' );
 ```
 
-The `twtxt_posts_per_feed` filter controls the post limit when yearly archives are disabled. Complete yearly feeds have no post limit.
+The `twtxt_posts_per_feed` filter controls the minimum retained in the main feed with yearly archives enabled, and the post limit when they are disabled. Complete years are never truncated to that limit.
 
 ## Feed identity and HTTP caching
 

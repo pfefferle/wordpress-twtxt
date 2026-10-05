@@ -122,8 +122,10 @@ function twtxt_pre_get_posts( $query ) {
 
 	/**
 	 * Filter the number of posts in the twtxt feed.
-	 *
-	 * @param int $posts_per_feed The number of posts. Default 200.
+ *
+ * With yearly archives, this is the minimum number retained in the main feed.
+ *
+ * @param int $posts_per_feed The number of posts. Default 200.
 	 */
 	$query->set( 'posts_per_rss', (int) apply_filters( 'twtxt_posts_per_feed', 200 ) );
 	$query->set(

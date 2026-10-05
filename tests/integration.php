@@ -75,7 +75,7 @@ wp_mkdir_p( dirname( $mu_file ) );
 file_put_contents(
 	$mu_file,
 	'<?php
-foreach ( array( "twtxt_archives", "twtxt_refresh", "twtxt_avatar_version", "twtxt_multiline", "twtxt_max_length" ) as $filter ) {
+foreach ( array( "twtxt_archives", "twtxt_posts_per_feed", "twtxt_refresh", "twtxt_avatar_version", "twtxt_multiline", "twtxt_max_length" ) as $filter ) {
     add_filter( $filter, function ( $default ) use ( $filter ) {
         $options = get_option( "twtxt_integration_filters", array() );
         return array_key_exists( $filter, $options ) ? $options[ $filter ] : $default;
@@ -210,6 +210,7 @@ try {
 	$tag_id = $tag['term_id'];
 	wp_set_post_terms( $post_ids[0], array( $tag_id ), 'post_tag' );
 	wp_set_post_terms( $post_ids[205], array( $tag_id ), 'post_tag' );
+	update_option( 'twtxt_integration_filters', array( 'twtxt_posts_per_feed' => 1 ) );
 	$tagged = twtxt_test_fetch( '/?feed=twtxt&tag=twtxt-integration-' . $user_id );
 	twtxt_test_assert( 1 === count( twtxt_test_entries( $tagged ) ), 'Tag feed must retain its scope.' );
 	list( $tag_hash, $tag_path ) = explode( ' ', twtxt_test_metadata( $tagged, 'prev' ), 2 );
@@ -217,10 +218,13 @@ try {
 	twtxt_test_assert( 1 === count( twtxt_test_entries( $tag_archive ) ) && '' === twtxt_test_metadata( $tag_archive, 'prev' ), 'Tag archives must exclude posts from other tags and years.' );
 	twtxt_test_assert( twtxt_test_metadata( $tag_archive, 'url' ) === twtxt_test_metadata( $tagged, 'url' ), 'Tag archives must share their main feed identity.' );
 
-	// A year with no posts still needs to expose its earlier history.
+	// Default feeds on inactive blogs must expose posts without archive support.
 	wp_remove_object_terms( $post_ids[0], $tag_id, 'post_tag' );
+	delete_option( 'twtxt_integration_filters' );
 	$empty_year = twtxt_test_fetch( '/?feed=twtxt&tag=twtxt-integration-' . $user_id );
-	twtxt_test_assert( 200 === wp_remote_retrieve_response_code( $empty_year ) && ! twtxt_test_entries( $empty_year ) && '' !== twtxt_test_metadata( $empty_year, 'prev' ), 'Empty current years must remain valid feeds with a history link.' );
+	twtxt_test_assert( 200 === wp_remote_retrieve_response_code( $empty_year ) && twtxt_test_entries( $empty_year ) === twtxt_test_entries( $tag_archive ), 'An inactive feed must include older posts directly.' );
+	twtxt_test_assert( '' === twtxt_test_metadata( $empty_year, 'prev' ), 'A feed containing all posts must not link to duplicate archives.' );
+	twtxt_test_assert( twtxt_test_metadata( $empty_year, 'url' ) === twtxt_test_metadata( $tagged, 'url' ), 'Extending the main feed across years must preserve its identity.' );
 
 	wp_update_post(
 		array(
@@ -252,6 +256,29 @@ try {
 	twtxt_test_assert( 200 === count( twtxt_test_entries( $legacy ) ), 'Disabling archives must restore the latest-200 behavior.' );
 	twtxt_test_assert( '' === twtxt_test_metadata( $legacy, 'refresh' ) && '' === twtxt_test_metadata( $legacy, 'prev' ), 'Disabled hints and archives must be omitted.' );
 	twtxt_test_assert( twtxt_test_metadata( $legacy, 'url' ) === twtxt_test_metadata( $response, 'url' ), 'Archive configuration must not change feed identity.' );
+
+	// Simulate a new year with only a few recent posts and a busy previous year.
+	delete_option( 'twtxt_integration_filters' );
+	for ( $i = 0; $i < 200; ++$i ) {
+		wp_update_post(
+			array(
+				'ID'            => $post_ids[ $i ],
+				'post_date'     => ( $year - 1 ) . '-06-01 12:00:00',
+				'post_date_gmt' => ( $year - 1 ) . '-06-01 12:00:00',
+			)
+		);
+	}
+	$recent_years = twtxt_test_fetch( $path );
+	$recent_posts = twtxt_test_entries( $recent_years );
+	twtxt_test_assert( 207 === count( $recent_posts ), 'The main feed must include the entire boundary year to retain at least 200 posts.' );
+	twtxt_test_assert( 0 === strpos( $recent_posts[0], (string) ( $year - 1 ) ) && 0 === strpos( end( $recent_posts ), (string) $year ), 'The main feed must include previous and current years in chronological order.' );
+	list( $history_hash, $history_path ) = explode( ' ', twtxt_test_metadata( $recent_years, 'prev' ), 2 );
+	$history                             = twtxt_test_fetch( $history_path );
+	twtxt_test_assert( twtxt_test_entries( $history ) === twtxt_test_entries( $oldest ), 'prev must skip every year already present in the main feed.' );
+	twtxt_test_assert( ! array_intersect( $recent_posts, twtxt_test_entries( $history ) ), 'A multi-year main feed must not duplicate its linked archive.' );
+	$explicit_year = twtxt_test_fetch( $prev_path );
+	twtxt_test_assert( 201 === count( twtxt_test_entries( $explicit_year ) ), 'An explicitly requested archive must still contain exactly one complete year.' );
+	twtxt_test_assert( twtxt_test_metadata( $recent_years, 'url' ) === twtxt_test_metadata( $response, 'url' ), 'The oldest retained year must not change feed identity.' );
 
 	twtxt_test_assert( 'om5qesa' === twtxt_get_twt_hash( 'https://example.com/twtxt.txt', '2025-04-29T12:00:00+00:00', 'Hello World!' ), 'Hash v1 reference vector failed.' );
 	twtxt_test_assert( 'myzxbwxktuvs' === twtxt_get_twt_hash( 'https://example.com/twtxt.txt', '2026-07-01T00:00:00Z', 'Hello World!' ), 'Hash v2 epoch reference vector failed.' );
