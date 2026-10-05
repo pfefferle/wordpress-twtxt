@@ -6,6 +6,7 @@
  * Author: Matthias Pfefferle
  * Author URI: https://notiz.blog
  * Version: 1.0.1
+ * Requires at least: 5.5
  * License: MIT
  * License URI: https://opensource.org/licenses/MIT
  * Text Domain: twtxt
@@ -45,7 +46,19 @@ function twtxt_do_feed( $for_comments ) {
 		return;
 	}
 
-	load_template( __DIR__ . '/templates/feed-twtxt.php' );
+	$metadata = twtxt_get_metadata();
+	$entries  = array_map( 'twtxt_get_post_line', array_reverse( $GLOBALS['wp_query']->posts ) );
+
+	if ( twtxt_send_feed_headers( $metadata, $entries ) ) {
+		load_template(
+			__DIR__ . '/templates/feed-twtxt.php',
+			false,
+			array(
+				'metadata' => $metadata,
+				'entries'  => $entries,
+			)
+		);
+	}
 }
 
 /**
@@ -113,6 +126,14 @@ function twtxt_pre_get_posts( $query ) {
 	 * @param int $posts_per_feed The number of posts. Default 200.
 	 */
 	$query->set( 'posts_per_rss', (int) apply_filters( 'twtxt_posts_per_feed', 200 ) );
+	$query->set(
+		'orderby',
+		array(
+			'date' => 'DESC',
+			'ID'   => 'DESC',
+		)
+	);
+	twtxt_set_archive_year( $query );
 }
 add_action( 'pre_get_posts', 'twtxt_pre_get_posts' );
 
@@ -124,21 +145,33 @@ add_action( 'pre_get_posts', 'twtxt_pre_get_posts' );
  * must not contain tabs, line breaks or other control characters.
  * Longer texts are shortened at the last space and end with "…".
  *
- * @param int $length The maximum number of characters.
+ * @param int         $length The maximum number of characters.
+ * @param WP_Post|int $post   The post. Default is the current post.
  *
  * @return string The text.
  */
-function twtxt_get_the_excerpt( $length = 140 ) {
-	$text = get_the_title();
+function twtxt_get_the_excerpt( $length = 140, $post = null ) {
+	$text = get_the_title( $post );
 
 	if ( ! $text ) {
-		$text = get_the_excerpt();
+		$text = get_the_excerpt( $post );
 	}
 
 	$text = html_entity_decode( wp_strip_all_tags( $text ), ENT_QUOTES, 'UTF-8' );
 
-	// Decoding can bring back tabs and line breaks (`&#9;`, `&#10;`).
-	$text   = trim( preg_replace( '/[\p{Cc}\s]+/u', ' ', $text ) );
+	/**
+	 * Filter whether excerpts preserve paragraph breaks as Unicode separators.
+	 *
+	 * @param bool        $multiline Whether to enable multiline output. Default false.
+	 * @param WP_Post|int $post      The post being rendered.
+	 */
+	if ( apply_filters( 'twtxt_multiline', false, $post ) ) {
+		$text = str_replace( array( "\r\n", "\r", "\n" ), "\xE2\x80\xA8", $text );
+		$text = trim( preg_replace( '/[^\S\x{2028}]+|[\p{Cc}]+/u', ' ', $text ) );
+	} else {
+		$text = trim( preg_replace( '/[\p{Cc}\s]+/u', ' ', $text ) );
+	}
+
 	$length = max( $length, 1 );
 
 	if ( mb_strlen( $text ) > $length ) {
@@ -158,13 +191,84 @@ function twtxt_get_the_excerpt( $length = 140 ) {
 }
 
 /**
+ * Return a complete, newline-terminated twtxt post line.
+ *
+ * @param WP_Post $post The post to render.
+ *
+ * @return string The timestamp and text separated by a tab.
+ */
+function twtxt_get_post_line( $post ) {
+	$url = wp_get_shortlink( $post->ID );
+
+	if ( ! $url ) {
+		$url = get_permalink( $post );
+	}
+
+	/**
+	 * Filter the maximum length of a post, including its permalink.
+	 *
+	 * @param int     $length Maximum number of characters. Default 140.
+	 * @param WP_Post $post   The post being rendered.
+	 */
+	$length = max( 1, (int) apply_filters( 'twtxt_max_length', 140, $post ) );
+	$text   = twtxt_get_the_excerpt( $length - mb_strlen( ' ⌘ ' . $url ), $post ) . ' ⌘ ' . $url;
+
+	return get_post_time( 'c', true, $post ) . "\t" . $text . "\n";
+}
+
+/**
+ * Build the ordered metadata used by the template and cache validator.
+ *
+ * @return array Metadata field names mapped to values or lists of values.
+ */
+function twtxt_get_metadata() {
+	$metadata    = array(
+		'nick'      => twtxt_get_nick(),
+		'url'       => twtxt_get_canonical_url(),
+		'lang'      => get_locale(),
+		'generator' => 'https://github.com/pfefferle/wordpress-twtxt',
+	);
+	$avatar      = twtxt_get_avatar();
+	$description = twtxt_get_description();
+	$refresh     = twtxt_get_refresh();
+	$prev        = twtxt_get_prev();
+	$follows     = twtxt_get_follows();
+
+	if ( $avatar ) {
+		$metadata['avatar'] = $avatar;
+	}
+	if ( '' !== $description ) {
+		$metadata['description'] = $description;
+	}
+	if ( $refresh ) {
+		$metadata['refresh'] = (string) $refresh;
+	}
+	if ( $prev ) {
+		$metadata['prev'] = $prev;
+	}
+
+	$metadata['following'] = (string) count( $follows );
+	$metadata['link']      = array();
+	$metadata['follow']    = array();
+
+	foreach ( twtxt_get_links() as $label => $url ) {
+		$metadata['link'][] = $label . ' ' . $url;
+	}
+	foreach ( $follows as $nick => $url ) {
+		$metadata['follow'][] = $nick . ' ' . $url;
+	}
+
+	return $metadata;
+}
+
+/**
  * Return the nickname of the feed owner.
  *
  * @return string The nickname.
  */
 function twtxt_get_nick() {
 	if ( is_author() ) {
-		return sanitize_title( get_the_author_meta( 'user_nicename' ) );
+		return sanitize_title( get_the_author_meta( 'user_nicename', get_queried_object_id() ) );
 	}
 
 	return sanitize_title( get_bloginfo( 'name' ) );
@@ -200,7 +304,53 @@ function twtxt_get_avatar() {
 		return '';
 	}
 
-	return esc_url_raw( $avatar );
+	$avatar = esc_url_raw( $avatar );
+
+	// An explicit fragment supplied by an avatar provider already versions it.
+	if ( ! $avatar || false !== strpos( $avatar, '#' ) ) {
+		return $avatar;
+	}
+
+	if ( is_author() ) {
+		$version = get_user_meta( get_queried_object_id(), 'twtxt_avatar_version', true );
+	} else {
+		$icon_id = (int) get_option( 'site_icon' );
+		$version = $icon_id ? get_post_field( 'post_modified_gmt', $icon_id ) : '';
+	}
+
+	/**
+	 * Filter the avatar version used to invalidate client image caches.
+	 *
+	 * @param string $version The site icon modification date or author profile version.
+	 * @param string $avatar  The avatar URL without a fragment.
+	 */
+	$version = apply_filters( 'twtxt_avatar_version', $version, $avatar );
+
+	return $avatar . '#' . substr( md5( $avatar . ':' . (string) $version ), 0, 12 );
+}
+
+/**
+ * Invalidate cached author avatars when their WordPress profile changes.
+ *
+ * @param int $user_id The updated user ID.
+ */
+function twtxt_update_avatar_version( $user_id ) {
+	update_user_meta( $user_id, 'twtxt_avatar_version', microtime( true ) );
+}
+add_action( 'profile_update', 'twtxt_update_avatar_version' );
+
+/**
+ * Return the suggested feed refresh interval in seconds.
+ *
+ * @return int The interval, or zero to omit the refresh hint.
+ */
+function twtxt_get_refresh() {
+	/**
+	 * Filter the suggested interval between client fetches.
+	 *
+	 * @param int $seconds Refresh interval in seconds. Default 300. Zero disables it.
+	 */
+	return max( 0, (int) apply_filters( 'twtxt_refresh', 300 ) );
 }
 
 /**
@@ -371,3 +521,6 @@ function twtxt_add_discovery_link() {
 	printf( '<link rel="alternate" type="text/plain" title="%s" href="%s" />' . PHP_EOL, esc_attr__( 'twtxt', 'twtxt' ), esc_url( twtxt_get_feed_url() ) );
 }
 add_action( 'wp_head', 'twtxt_add_discovery_link' );
+
+require_once __DIR__ . '/includes/cache.php';
+require_once __DIR__ . '/includes/archives.php';

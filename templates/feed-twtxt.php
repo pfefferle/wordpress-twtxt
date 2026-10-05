@@ -17,44 +17,15 @@
 #
 # ------------------------------------------
 #
-# nick = <?php echo twtxt_get_nick() . "\n"; ?>
-# url = <?php echo esc_url_raw( apply_filters( 'self_link', get_self_link() ) ) . "\n"; ?>
-# lang = <?php echo get_locale() . "\n"; ?>
-# generator = https://github.com/pfefferle/wordpress-twtxt
 <?php
-$avatar      = twtxt_get_avatar();
-$description = twtxt_get_description();
-$links       = twtxt_get_links();
-$follows     = twtxt_get_follows();
-
-if ( $avatar ) {
-	printf( "# avatar = %s\n", $avatar );
-}
-
-if ( '' !== $description ) {
-	printf( "# description = %s\n", $description );
-}
-
-printf( "# following = %d\n", count( $follows ) );
-
-foreach ( $links as $label => $url ) {
-	printf( "# link = %s %s\n", $label, $url );
-}
-
-foreach ( $follows as $nick => $url ) {
-	printf( "# follow = %s %s\n", $nick, $url );
+foreach ( $args['metadata'] as $field => $values ) {
+	foreach ( (array) $values as $value ) {
+		printf( "# %s = %s\n", $field, $value );
+	}
 }
 
 echo "\n";
 
-// Newest posts first in the query, oldest first in the file.
-foreach ( array_reverse( $posts ) as $post ) {
-	setup_postdata( $post );
-
-	$url = wp_get_shortlink();
-
-	// A status should not be longer than 140 characters, the link included.
-	printf( "%s\t%s ⌘ %s\n", get_post_time( 'c', true ), twtxt_get_the_excerpt( 140 - mb_strlen( ' ⌘ ' . $url ) ), $url );
+foreach ( $args['entries'] as $entry ) {
+	echo $entry;
 }
-
-wp_reset_postdata();

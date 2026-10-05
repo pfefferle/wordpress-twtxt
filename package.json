@@ -7,6 +7,7 @@
     "@wordpress/env": "^10.0.0"
   },
   "scripts": {
+    "test": "wp-env run tests-cli wp eval-file wp-content/plugins/twtxt/tests/integration.php",
     "env:start": "wp-env start",
     "env:stop": "wp-env stop",
     "env:destroy": "wp-env destroy"
